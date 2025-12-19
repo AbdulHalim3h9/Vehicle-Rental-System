@@ -1,11 +1,12 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 const config = {
-    connection_string: 'postgresql://neondb_owner:npg_zDO4MSK1ZBGv@ep-hidden-snow-a8uhssbd-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require',
-    port: 5000,
+    connection_string: process.env.CONNECTION_STRING,
+    port: process.env.PORT,
+    jwt_secret: process.env.JWT_SECRET
 }
 
 export default config;

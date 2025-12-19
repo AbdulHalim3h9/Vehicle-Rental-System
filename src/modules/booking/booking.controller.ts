@@ -21,11 +21,12 @@ const createBooking = async (req: Request, res: Response) => {
 
 const updateBooking = async (req: Request, res: Response) => {
       try {
-            const result = await BookingService.updateBooking(req.body)
+            const tokenUserId = req.user?.id;
+            const result = await BookingService.updateBooking({ ...req.body, userId: tokenUserId })
       res.status(200).json({
             success: true,
             message: "Booking updated successfully",
-            data: result.rows[0]
+            data: result
       })
       } catch (err: any) {
             res.status(500).json({
