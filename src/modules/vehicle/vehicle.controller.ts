@@ -30,7 +30,7 @@ const getAllVehicles = async (req: Request, res: Response) => {
             } else {
                   res.status(200).json({
                         success: true,
-                        message: "All vehicles fetched successfully",
+                        message: "All vehicles retrived successfully",
                         data: result.rows
                   })
             }
@@ -55,7 +55,7 @@ const getVehicleById = async (req: Request, res: Response) => {
             } else {
                   res.status(200).json({
                         success: true,
-                        message: "Vehicle fetched successfully",
+                        message: "Vehicle retrieved successfully",
                         data: result.rows[0]
                   })
             }
@@ -70,7 +70,7 @@ const getVehicleById = async (req: Request, res: Response) => {
 
 const updateVehicle = async (req: Request, res: Response) => {
       try {
-            const result = await VehicleService.updateVehicle(req.body)
+            const result = await VehicleService.updateVehicle({...req.body, vehicleId: req.params.vehicleId})
             if (result.rowCount === 0) {
                   res.status(200).json({
                         success: true,
@@ -97,11 +97,17 @@ const deleteVehicle = async (req: Request, res: Response) => {
       try {
             // const tokenUserId = req.user?.id;
             const result = await VehicleService.deleteVehicle(req.params.vehicleId as string)
-            res.status(200).json({
-                  success: true,
-                  message: "Vehicle deleted successfully",
-                  data: result
-            })
+            if (result.status === "error") {
+                  res.status(200).json({
+                        success: false,
+                        message: result.message
+                  })
+            } else {
+                  res.status(200).json({
+                        success: true,
+                        message: "Vehicle deleted successfully"
+                  })
+            }
       } catch (err: any) {
             res.status(500).json({
                   success: false,

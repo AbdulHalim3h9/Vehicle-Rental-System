@@ -8,8 +8,9 @@ const createVehicle = async (payload: Record<string, unknown>) => {
 }
 
 const updateVehicle = async (payload: Record<string, unknown>) => {
-      const { id, vehicle_name, type, registration_number, daily_rent_price, availability_status } = payload;
-      const result = await pool.query(`UPDATE vehicles SET vehicle_name = $1, type = $2, registration_number = $3, daily_rent_price = $4, availability_status = $5 WHERE id = $6 RETURNING *`, [vehicle_name, type, registration_number, daily_rent_price, availability_status, id]);
+      const { vehicleId, vehicle_name, type, registration_number, daily_rent_price, availability_status } = payload;
+      const result = await pool.query(`UPDATE vehicles SET vehicle_name = $1, type = $2, registration_number = $3, daily_rent_price = $4, availability_status = $5 WHERE id = $6 RETURNING *`, [vehicle_name, type, registration_number, daily_rent_price, availability_status, vehicleId]);
+      console.log(vehicleId)
       return result;
 }
 
@@ -23,18 +24,18 @@ const getVehicleById = async (id : string) => {
       return result;
 }
 
+
 const deleteVehicle = async (id: string) => {
-      const booking = await pool.query(`SELECT * FROM bookings WHERE vehicle_id = $1`, [id]);
-      console.log("first")
-      console.log(booking.rows[0])
-      if(booking.rows.length === 0) {
+      const { rows: bookings } = await pool.query(`SELECT * FROM bookings WHERE vehicle_id = $1`, [id]);
+      if (bookings.length === 0) {
             const result = await pool.query(`DELETE FROM vehicles WHERE id = $1`, [id]);
-            console.log(
-                  `Deleted vehicle with id: ${id}`
-            )
-            return result;
+            if (result.rows[0]) {
+                  return {status: "success", message: "Vehicle deleted successfully"};
+            } else {
+                  return {status: "error", message: "Vehicle not found"};
+            }
       }
-      return { error: "Vehicle is currently booked" };
+      return { status: "error", message: "Vehicle is currently booked" };
 }
 
 export const VehicleService = {

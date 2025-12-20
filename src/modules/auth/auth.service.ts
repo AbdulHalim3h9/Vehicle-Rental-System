@@ -23,6 +23,7 @@ const signin = async (email: string, password: string) => {
       if (!isPasswordMatched) {
             return { status: 'error', message: 'Invalid password' };
       }
+      console.log(config.jwt_secret)
       const token = jwt.sign({ id: user.id,
             email: user.email,
             role: user.role
