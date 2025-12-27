@@ -28,7 +28,7 @@ const signin = async (email: string, password: string) => {
             email: user.email,
             role: user.role
        }, config.jwt_secret!, { expiresIn: '1d' });
-      const { _, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
       return { token, user: userWithoutPassword };
 }
 

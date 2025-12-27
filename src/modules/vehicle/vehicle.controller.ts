@@ -30,7 +30,7 @@ const getAllVehicles = async (req: Request, res: Response) => {
             } else {
                   res.status(200).json({
                         success: true,
-                        message: "All vehicles retrived successfully",
+                        message: "Vehicles retrived successfully",
                         data: result.rows
                   })
             }
