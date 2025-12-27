@@ -11,8 +11,16 @@ const createBooking = async (payload: Record<string, unknown>) => {
       }
 
       const totalAmount = await calculateTotalAmount(vehicle_id as string, rent_start_date as string, rent_end_date as string);
-      
-      const result = await pool.query(`INSERT INTO bookings (customer_id, vehicle_id, rent_start_date, rent_end_date, total_price) VALUES ($1, $2, $3, $4, $5) RETURNING *`, [customer_id, vehicle_id, rent_start_date, rent_end_date, totalAmount]);
+
+      const vehicle = await pool.query(`SELECT availability_status FROM vehicles WHERE id = $1`, [vehicle_id]);
+      if (vehicle.rows[0].availability_status === "booked") {
+            return { error: "Vehicle is already booked" };
+      }
+
+      const result = await pool.query(`INSERT INTO bookings (customer_id, vehicle_id, rent_start_date, rent_end_date, total_price, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`, [customer_id, vehicle_id, rent_start_date, rent_end_date, totalAmount, "active"]);
+
+      await pool.query(`UPDATE vehicles SET availability_status = 'booked' WHERE id = $1`, [vehicle_id]);
+
       return result;
 }
 
@@ -26,7 +34,10 @@ const updateBooking = async (payload: Record<string, unknown>) => {
       const user = await pool.query(`SELECT role FROM users WHERE id = $1`, [userId]);
 
       if (user.rows[0].role === "customer" && tokenUserId === userId && bookingStartDate > new Date().getTime()) {
-            await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
+            if(status === "cancelled") {
+                  await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
+                  await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
+            }
             return { success: true };
       }
 
@@ -35,7 +46,6 @@ const updateBooking = async (payload: Record<string, unknown>) => {
             if (status === "returned") {
                   await pool.query(`UPDATE vehicles SET availablity_status = $1 WHERE id = $2`, ["available", vehicleId]);
             }
-            await pool.query(`UPDATE vehicles SET availablity_status = $1 WHERE id = $2`, ["returned", vehicleId]);
             return { success: true };
       }
 

@@ -71,17 +71,17 @@ const getVehicleById = async (req: Request, res: Response) => {
 const updateVehicle = async (req: Request, res: Response) => {
       try {
             const result = await VehicleService.updateVehicle({...req.body, vehicleId: req.params.vehicleId})
-            if (result.rowCount === 0) {
-                  res.status(200).json({
-                        success: true,
-                        message: "No vehicle found",
-                        data: result.rows
+            if (result.status == 'error') {
+                  res.status(400).json({
+                        success: false,
+                        message: result.message,
+                        data: result.data
                   })
             } else {
                   res.status(200).json({
                         success: true,
-                        message: "Vehicle updated successfully",
-                        data: result.rows[0]
+                        message: result.message,
+                        data: result.data
                   })
             }
       } catch (err: any) {
