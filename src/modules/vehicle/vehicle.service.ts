@@ -56,10 +56,11 @@ const getVehicleById = async (id: string) => {
       return result;
 }
 
-
+///cant delete vehicle if it is booked
 const deleteVehicle = async (id: string) => {
-      const { rows: bookings } = await pool.query(`SELECT * FROM bookings WHERE vehicle_id = $1`, [id]);
-      if (bookings.length === 0) {
+      await BookingService.resolveExpiredBookings();
+      const vehicleBookings = await pool.query(`SELECT * FROM bookings WHERE vehicle_id = $1`, [id]);
+      if (vehicleBookings.rows.length === 0) {
             const result = await pool.query(`DELETE FROM vehicles WHERE id = $1`, [id]);
             if (result.rows[0]) {
                   return { status: "success", message: "Vehicle deleted successfully" };
