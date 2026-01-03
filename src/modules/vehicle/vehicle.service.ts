@@ -1,4 +1,6 @@
 import { pool } from "../../config/db";
+// Add at the top of vehicle.service.ts:
+import { BookingService } from "../booking/booking.service";
 
 const createVehicle = async (payload: Record<string, unknown>) => {
       const { vehicle_name, type, registration_number, daily_rent_price, availability_status } = payload;
@@ -43,11 +45,13 @@ const updateVehicle = async (payload: Record<string, unknown>) => {
 }
 
 const getAllVehicles = async () => {
+      await BookingService.resolveExpiredBookings();
       const result = await pool.query(`SELECT * FROM vehicles`);
       return result;
 }
 
 const getVehicleById = async (id: string) => {
+      await BookingService.resolveExpiredBookings();
       const result = await pool.query(`SELECT * FROM vehicles WHERE id = $1`, [id]);
       return result;
 }
