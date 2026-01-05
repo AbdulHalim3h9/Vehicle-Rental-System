@@ -47,7 +47,7 @@ const getVehicleById = async (req: Request, res: Response) => {
       try {
             const result = await VehicleService.getVehicleById(req.params.vehicleId as string)
             if (result.rowCount === 0) {
-                  res.status(200).json({
+                  res.status(404).json({
                         success: true,
                         message: "No vehicle found",
                         data: result.rows
@@ -72,12 +72,12 @@ const updateVehicle = async (req: Request, res: Response) => {
       try {
             const result = await VehicleService.updateVehicle({...req.body, vehicleId: req.params.vehicleId})
             if (result.status == 'error') {
-                  res.status(400).json({
+                  res.status(result.statusCode).json({
                         success: result.status,
                         message: result.message,
                   })
             } else {
-                  res.status(200).json({
+                  res.status(result.statusCode).json({
                         success: result.status,
                         message: result.message,
                   })
@@ -96,12 +96,12 @@ const deleteVehicle = async (req: Request, res: Response) => {
             // const tokenUserId = req.user?.id;
             const result = await VehicleService.deleteVehicle(req.params.vehicleId as string)
             if (result.status === "error") {
-                  res.status(400).json({
+                  res.status(result.statusCode).json({
                         success: result.status,
                         message: result.message
                   })
             } else {
-                  res.status(200).json({
+                  res.status(result.statusCode).json({
                         success: result.status,
                         message: result.message
                   })

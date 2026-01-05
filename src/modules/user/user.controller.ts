@@ -23,7 +23,7 @@ const updateUser = async (req: Request, res: Response) => {
             const tokenUserId = req.user?.id;
             const tokenUserRole = req.user?.role;
             const result = await UserService.updateUser({ ...req.body, tokenUserId, tokenUserRole , id: req.params.userId })
-            res.status(200).json({
+            res.status(result.statusCode).json({
                   success: result.status,
                   message: result.message
             })
@@ -39,7 +39,7 @@ const updateUser = async (req: Request, res: Response) => {
 const deleteUser = async (req: Request, res: Response) => {
       try {
             const result = await UserService.deleteUser(req.params.userId as string);
-            res.status(200).json({
+            res.status(result.statusCode).json({
                   success: result.status,
                   message: result.message
             })
