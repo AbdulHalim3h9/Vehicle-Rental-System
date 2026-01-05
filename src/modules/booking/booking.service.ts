@@ -22,8 +22,8 @@ const createBooking = async (
       );
       //check if any booking date overlaps with existing bookings
       const existingBookings = await pool.query(
-            `SELECT * FROM bookings WHERE ($1 < rent_end_date AND $2 > rent_start_date) LIMIT 1`,
-            [rent_start_date, rent_end_date]
+            `SELECT * FROM bookings WHERE vehicle_id = $1 AND ($2 <= rent_end_date AND $3 >= rent_start_date) LIMIT 1`,
+            [vehicle_id, rent_start_date, rent_end_date]
       );
       
       if (existingBookings.rows.length > 0) {
@@ -73,7 +73,6 @@ const updateBooking = async (payload: Record<string, unknown>) => {
             userId,
             vehicleId,
             startDate,
-            endDate,
             status,
             tokenUserId
       } = payload;
@@ -86,27 +85,38 @@ const updateBooking = async (payload: Record<string, unknown>) => {
 
       if (user.rows[0].role === "customer" && tokenUserId === userId && bookingStartDate > new Date().getTime()) {
             if (status === "cancelled") {
-                  await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, ["cancelled", bookingId]);
+                  await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
                   await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
             }
             return { success: true };
       }
 
-      if (user.rows[0].role === "admin") {
+      if (user.rows[0].role === "admin" && status === "returned") {
             await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
-            if (status === "returned") {
-                  await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
-            }
+
+            await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
+            
             return { success: true };
       }
 
       return { error: "Unauthorized" };
 }
 
-const getAllBookings = async () => {
+const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
+
       await resolveExpiredBookings();
-      const result = await pool.query(`SELECT * FROM bookings`);
-      return result;
+      if (tokenRole !== "admin") {
+            const userBookings = await pool.query(`SELECT * FROM bookings WHERE customer_id = $1`, [tokenUserId]);
+            if (userBookings.rows.length === 0) {
+                  throw new Error("No bookings found for this user");
+            }
+            return userBookings;
+      } else if (tokenRole === "admin") {
+            // Admin can see all bookings
+            const result = await pool.query(`SELECT * FROM bookings`);
+            return result;
+      }
+      throw new Error("No bookings found for this user");
 }
 
 
@@ -118,8 +128,13 @@ const calculateTotalAmount = async (
       const vehicleDailyRentPrice = await pool.query(
             `SELECT daily_rent_price FROM vehicles WHERE id = $1`, [vehicleId]
       );
+      const startDate = new Date(rentStartDate);
+      const endDate = new Date(rentEndDate);
+      if (startDate > endDate) {
+            throw new Error("Start date cannot be later than end date");
+      }
       const totalDays = Math.floor(
-            (new Date(rentEndDate).getTime() - new Date(rentStartDate).getTime()) /
+            (endDate.getTime() - startDate.getTime()) /
             (1000 * 60 * 60 * 24)
       );
       const totalAmount = vehicleDailyRentPrice.rows[0].daily_rent_price * totalDays;
@@ -151,7 +166,6 @@ const resolveExpiredBookings = async () => {
 
             return expiredBookings.rows.length;
       } catch (error) {
-            console.error('Error checking expired bookings:', error);
             return 0;
       }
 }

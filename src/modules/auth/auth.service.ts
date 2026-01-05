@@ -15,7 +15,6 @@ const signup = async (payload: Record<string, unknown>) => {
 const signin = async (email: string, password: string) => {
       const result = await pool.query(`SELECT id, name, email, phone, role, password FROM users WHERE email = $1`, [email])
       const user = result.rows[0]
-      console.log(result.rows)
       if (!user) {
             return { status: 'error', message: 'User not found' };
       }
@@ -23,7 +22,6 @@ const signin = async (email: string, password: string) => {
       if (!isPasswordMatched) {
             return { status: 'error', message: 'Invalid password' };
       }
-      console.log(config.jwt_secret)
       const token = jwt.sign({ id: user.id,
             email: user.email,
             role: user.role

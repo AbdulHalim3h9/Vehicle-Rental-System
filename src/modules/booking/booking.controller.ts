@@ -39,7 +39,15 @@ const updateBooking = async (req: Request, res: Response) => {
 
 const getAllBookings = async (req: Request, res: Response) => {
       try {
-            const result = await BookingService.getAllBookings()
+            const tokenUserId = req.user?.id;
+            const tokenRole = req.user?.role;
+            if (!tokenUserId) {
+                  return res.status(401).json({
+                        success: false,
+                        message: "Unauthorized"
+                  });
+            }
+            const result = await BookingService.getAllBookings(tokenUserId, tokenRole);
             res.status(200).json({
                   success: true,
                   message: "All bookings fetched successfully",

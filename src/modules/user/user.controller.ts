@@ -1,24 +1,6 @@
 import { Request, Response } from "express";
 import { UserService } from "./user.service";
 
-const createUser = async (req: Request, res: Response) => {
-
-      try {
-            const result = await UserService.createUser(req.body)
-            res.status(201).json({
-                  success: true,
-                  message: "User created successfully",
-                  data: result.rows[0]
-            })
-      } catch (err: any) {
-            res.status(500).json({
-                  success: false,
-                  message: "Failed to create user",
-                  error: err.message
-            })
-      }
-}
-
 const getAllUsers = async (req: Request, res: Response) => {
       try {
             const result = await UserService.getAllUsers();
@@ -36,31 +18,14 @@ const getAllUsers = async (req: Request, res: Response) => {
       }
 }
 
-const getUserById = async (req: Request, res: Response) => {
-      try {
-            const result = await UserService.getUserById(req.params.userId as string)
-            res.status(200).json({
-                  success: true,
-                  message: "User fetched successfully",
-                  data: result.rows[0]
-            })
-      } catch (err : any) {
-            res.status(500).json({
-                  success: false,
-                  message: "Failed to fetch user",
-                  error: err.message
-            })
-      }
-}
 const updateUser = async (req: Request, res: Response) => {
       try {
             const tokenUserId = req.user?.id;
             const tokenUserRole = req.user?.role;
             const result = await UserService.updateUser({ ...req.body, tokenUserId, tokenUserRole , id: req.params.userId })
             res.status(200).json({
-                  success: true,
-                  message: "User updated successfully",
-                  data: result
+                  success: result.status,
+                  message: result.message
             })
       } catch (err : any) {
             res.status(500).json({
@@ -70,21 +35,16 @@ const updateUser = async (req: Request, res: Response) => {
             })
       }
 }
-      const deleteUser = async (req: Request, res: Response) => {
-            try {
+
+const deleteUser = async (req: Request, res: Response) => {
+      try {
             const result = await UserService.deleteUser(req.params.userId as string);
-            if (result.status === "error") {
-                  res.status(200).json({
-                        success: false,
-                        message: result.message
-                  })
-            }
-            else{ res.status(200).json({
-                  success: true,
-                  message: "User deleted successfully",
-                  data: result
-            })}
-      } catch (err : any) {
+            res.status(200).json({
+                  success: result.status,
+                  message: result.message
+            })
+
+      } catch (err: any) {
             res.status(500).json({
                   success: false,
                   message: "Failed to delete user",
@@ -93,9 +53,7 @@ const updateUser = async (req: Request, res: Response) => {
       }
 }
 export const UserController = {
-      // createUser,
       getAllUsers,
-      // getUserById,
       updateUser,
       deleteUser
 }

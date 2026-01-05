@@ -73,15 +73,13 @@ const updateVehicle = async (req: Request, res: Response) => {
             const result = await VehicleService.updateVehicle({...req.body, vehicleId: req.params.vehicleId})
             if (result.status == 'error') {
                   res.status(400).json({
-                        success: false,
+                        success: result.status,
                         message: result.message,
-                        data: result.data
                   })
             } else {
                   res.status(200).json({
-                        success: true,
+                        success: result.status,
                         message: result.message,
-                        data: result.data
                   })
             }
       } catch (err: any) {
@@ -98,14 +96,14 @@ const deleteVehicle = async (req: Request, res: Response) => {
             // const tokenUserId = req.user?.id;
             const result = await VehicleService.deleteVehicle(req.params.vehicleId as string)
             if (result.status === "error") {
-                  res.status(200).json({
-                        success: false,
+                  res.status(400).json({
+                        success: result.status,
                         message: result.message
                   })
             } else {
                   res.status(200).json({
-                        success: true,
-                        message: "Vehicle deleted successfully"
+                        success: result.status,
+                        message: result.message
                   })
             }
       } catch (err: any) {

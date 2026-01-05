@@ -22,7 +22,6 @@ const signin = async (req: Request, res: Response) => {
       try {
             const { email, password } = req.body;
             const result = await authService.signin(email, password)
-            console.log(result)
             if (result.status === 'error') {
                   res.status(200).json({
                         success: false,
