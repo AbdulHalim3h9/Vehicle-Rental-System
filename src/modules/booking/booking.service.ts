@@ -20,9 +20,21 @@ const createBooking = async (
             `SELECT availability_status FROM vehicles WHERE id = $1`,
             [vehicle_id]
       );
-      if (vehicle.rows[0].availability_status === "booked") {
-            return { error: "Vehicle is already booked" };
+      //check if any booking date overlaps with existing bookings
+      const existingBookings = await pool.query(
+            `SELECT * FROM bookings WHERE ($1 < rent_end_date AND $2 > rent_start_date) LIMIT 1`,
+            [rent_start_date, rent_end_date]
+      );
+      
+      if (existingBookings.rows.length > 0) {
+            throw new Error("Vehicle is already booked for the selected period");
       }
+      
+      if (vehicle.rows[0].availability_status === "booked") {
+            throw new Error("Vehicle is already booked");
+      }
+
+      const status = (new Date(rent_start_date as string) < new Date()) ? "returned" : "active";
 
       const result = await pool.query(
             `INSERT INTO bookings (customer_id, vehicle_id, rent_start_date, rent_end_date, total_price, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -32,17 +44,24 @@ const createBooking = async (
                   rent_start_date,
                   rent_end_date,
                   totalAmount,
-                  "active"
+                  status
             ]
       );
-
-      await pool.query(
-            `UPDATE vehicles SET availability_status = 'booked' WHERE id = $1`,
-            [vehicle_id]
-      );
-
+      
+      if (status != "returned") {
+            await pool.query(
+                  `UPDATE vehicles SET availability_status = 'booked' WHERE id = $1`,
+                  [vehicle_id]
+            );
+      } else {
+            await pool.query(
+                  `UPDATE vehicles SET availability_status = 'available' WHERE id = $1`,
+                  [vehicle_id]
+            );
+      }
       return result;
 }
+
 
 //Customer: Cancel booking (before start date only)
 //Admin: Mark as "returned" (updates vehicle to "available")
@@ -58,6 +77,7 @@ const updateBooking = async (payload: Record<string, unknown>) => {
             status,
             tokenUserId
       } = payload;
+
       const bookingStartDate = new Date(startDate as string).getTime();
       const user = await pool.query(
             `SELECT role FROM users WHERE id = $1`,
@@ -107,33 +127,33 @@ const calculateTotalAmount = async (
 }
 
 const resolveExpiredBookings = async () => {
-  try {
-    const currentTime = new Date().toISOString();
-    
-    const expiredBookings = await pool.query(
-      `SELECT id, vehicle_id FROM bookings 
+      try {
+            const currentTime = new Date().toISOString();
+
+            const expiredBookings = await pool.query(
+                  `SELECT id, vehicle_id FROM bookings 
        WHERE status = 'active' 
        AND rent_end_date < $1`,
-      [currentTime]
-    );
+                  [currentTime]
+            );
 
-    for (const booking of expiredBookings.rows) {
-      await pool.query(
-        `UPDATE bookings SET status = $1 WHERE id = $2`,
-        ['returned', booking.id]
-      );
-      
-      await pool.query(
-        `UPDATE vehicles SET availability_status = $1 WHERE id = $2`,
-        ['available', booking.vehicle_id]
-      );
-    }
+            for (const booking of expiredBookings.rows) {
+                  await pool.query(
+                        `UPDATE bookings SET status = $1 WHERE id = $2`,
+                        ['returned', booking.id]
+                  );
 
-    return expiredBookings.rows.length;
-  } catch (error) {
-    console.error('Error checking expired bookings:', error);
-    return 0;
-  }
+                  await pool.query(
+                        `UPDATE vehicles SET availability_status = $1 WHERE id = $2`,
+                        ['available', booking.vehicle_id]
+                  );
+            }
+
+            return expiredBookings.rows.length;
+      } catch (error) {
+            console.error('Error checking expired bookings:', error);
+            return 0;
+      }
 }
 
 export const BookingService = {
