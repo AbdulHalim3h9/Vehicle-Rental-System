@@ -25,11 +25,11 @@ const createBooking = async (
             `SELECT * FROM bookings WHERE vehicle_id = $1 AND ($2 <= rent_end_date AND $3 >= rent_start_date) LIMIT 1`,
             [vehicle_id, rent_start_date, rent_end_date]
       );
-      
+
       if (existingBookings.rows.length > 0) {
             throw new Error("Vehicle is already booked for the selected period");
       }
-      
+
       if (vehicle.rows[0].availability_status === "booked") {
             throw new Error("Vehicle is already booked");
       }
@@ -47,7 +47,7 @@ const createBooking = async (
                   status
             ]
       );
-      
+
       if (status != "returned") {
             await pool.query(
                   `UPDATE vehicles SET availability_status = 'booked' WHERE id = $1`,
@@ -59,7 +59,20 @@ const createBooking = async (
                   [vehicle_id]
             );
       }
-      return result;
+
+      const vehicleDetails = await pool.query(
+            `SELECT * FROM vehicles WHERE id = $1`,
+            [vehicle_id]
+      );
+
+
+      return {
+            ...result.rows[0],
+            vehicle: {
+                  vehicle_name: vehicleDetails.rows[0].vehicle_name,
+                  daily_rent_price: vehicleDetails.rows[0].daily_rent_price
+            }
+      };
 }
 
 
@@ -95,7 +108,7 @@ const updateBooking = async (payload: Record<string, unknown>) => {
             await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
 
             await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
-            
+
             return { success: true };
       }
 
@@ -106,15 +119,74 @@ const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
 
       await resolveExpiredBookings();
       if (tokenRole !== "admin") {
-            const userBookings = await pool.query(`SELECT * FROM bookings WHERE customer_id = $1`, [tokenUserId]);
+            // Customer view with vehicle details
+            const userBookings = await pool.query(`
+                  SELECT 
+                        b.*,
+                        v.vehicle_name,
+                        v.registration_number,
+                        v.type
+                  FROM bookings b
+                  LEFT JOIN vehicles v ON b.vehicle_id = v.id
+                  WHERE b.customer_id = $1
+                  ORDER BY b.id DESC
+            `, [tokenUserId]);
+            
             if (userBookings.rows.length === 0) {
                   throw new Error("No bookings found for this user");
             }
-            return userBookings;
+            
+            // Format the response to match desired structure
+            const formattedBookings = userBookings.rows.map(booking => ({
+                  id: booking.id,
+                  vehicle_id: booking.vehicle_id,
+                  rent_start_date: booking.rent_start_date,
+                  rent_end_date: booking.rent_end_date,
+                  total_price: booking.total_price,
+                  status: booking.status,
+                  vehicle: {
+                        vehicle_name: booking.vehicle_name,
+                        registration_number: booking.registration_number,
+                        type: booking.type
+                  }
+            }));
+            
+            return { rows: formattedBookings };
       } else if (tokenRole === "admin") {
-            // Admin can see all bookings
-            const result = await pool.query(`SELECT * FROM bookings`);
-            return result;
+            // Admin can see all bookings with customer and vehicle details
+            const result = await pool.query(`
+                  SELECT 
+                        b.*,
+                        u.name as customer_name,
+                        u.email as customer_email,
+                        v.vehicle_name,
+                        v.registration_number
+                  FROM bookings b
+                  LEFT JOIN users u ON b.customer_id = u.id
+                  LEFT JOIN vehicles v ON b.vehicle_id = v.id
+                  ORDER BY b.id DESC
+            `);
+            
+            // Format the response to match desired structure
+            const formattedBookings = result.rows.map(booking => ({
+                  id: booking.id,
+                  customer_id: booking.customer_id,
+                  vehicle_id: booking.vehicle_id,
+                  rent_start_date: booking.rent_start_date,
+                  rent_end_date: booking.rent_end_date,
+                  total_price: booking.total_price,
+                  status: booking.status,
+                  customer: {
+                        name: booking.customer_name,
+                        email: booking.customer_email
+                  },
+                  vehicle: {
+                        vehicle_name: booking.vehicle_name,
+                        registration_number: booking.registration_number
+                  }
+            }));
+            
+            return { rows: formattedBookings };
       }
       throw new Error("No bookings found for this user");
 }

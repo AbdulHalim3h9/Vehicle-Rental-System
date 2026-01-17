@@ -7,7 +7,7 @@ const createBooking = async (req: Request, res: Response) => {
             res.status(201).json({
                   success: true,
                   message: "Booking created successfully",
-                  data: result.rows[0]
+                  data: result
             })
       }
       catch (err: any) {
@@ -48,9 +48,10 @@ const getAllBookings = async (req: Request, res: Response) => {
                   });
             }
             const result = await BookingService.getAllBookings(tokenUserId, tokenRole);
+            const message = tokenRole === "admin" ? "All bookings fetched successfully" : "Your bookings retrieved successfully";
             res.status(200).json({
                   success: true,
-                  message: "All bookings fetched successfully",
+                  message: message,
                   data: result.rows
             })
       } catch (err : any) {

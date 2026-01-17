@@ -47,7 +47,7 @@ const getVehicleById = async (req: Request, res: Response) => {
       try {
             const result = await VehicleService.getVehicleById(req.params.vehicleId as string)
             if (result.rowCount === 0) {
-                  res.status(404).json({
+                  res.status(200).json({
                         success: true,
                         message: "No vehicle found",
                         data: result.rows

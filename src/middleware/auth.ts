@@ -6,6 +6,7 @@ const auth = (...roles: string[]) => {
       return (req: Request, res: Response, next: NextFunction) => {
             try {
                   const token = req.headers.authorization;
+                  console.log(req.headers);
                   if (!token) {
                         return res.status(403).json({
                               success: false,

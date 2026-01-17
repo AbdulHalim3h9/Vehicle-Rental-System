@@ -23,9 +23,14 @@ const updateUser = async (req: Request, res: Response) => {
             const tokenUserId = req.user?.id;
             const tokenUserRole = req.user?.role;
             const result = await UserService.updateUser({ ...req.body, tokenUserId, tokenUserRole , id: req.params.userId })
-            res.status(result.statusCode).json({
-                  success: result.status,
-                  message: result.message
+            // res.status(result.statusCode).json({
+            //       success: result.status,
+            //       message: result.message
+            // })
+            res.status(200).json({
+                  success: true,
+                  message: "User updated successfully",
+                  data: result.rows[0]
             })
       } catch (err : any) {
             res.status(500).json({
@@ -39,9 +44,10 @@ const updateUser = async (req: Request, res: Response) => {
 const deleteUser = async (req: Request, res: Response) => {
       try {
             const result = await UserService.deleteUser(req.params.userId as string);
-            res.status(result.statusCode).json({
-                  success: result.status,
-                  message: result.message
+            res.status(200).json({
+                  success: true,
+                  message: "User deleted successfully",
+                  data: result.rows[0]
             })
 
       } catch (err: any) {
