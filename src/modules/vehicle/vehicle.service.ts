@@ -52,14 +52,21 @@ const updateVehicle = async (payload: Record<string, unknown>) => {
       if (updates.length === 0) {
             return { 
                   statusCode: 400,
-                  status: "error", 
+                  success: false, 
                   message: "No updates provided" 
             };
       }
       const result = await pool.query(`UPDATE vehicles SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`, [...values, vehicleId]);
+      if (result.rows.length === 0) {
+            return { 
+                  statusCode: 404,
+                  success: false, 
+                  message: "Vehicle not found" 
+            };
+      }
       return { 
             statusCode: 200,
-            status: "success", 
+            success: true, 
             message: "Vehicle updated successfully", 
             data: result.rows[0] 
       };
@@ -87,20 +94,20 @@ const deleteVehicle = async (id: string) => {
             if (result.rows[0]) {
                   return { 
                         statusCode: 200,
-                        status: "success", 
+                        success: true, 
                         message: "Vehicle deleted successfully" 
                   };
             } else {
                   return { 
                         statusCode: 404,
-                        status: "error", 
+                        success: false, 
                         message: "Vehicle not found" 
                   };
             }
       }
       return { 
             statusCode: 403,
-            status: "error", 
+            success: false, 
             message: "Vehicle is currently booked" 
       };
 }

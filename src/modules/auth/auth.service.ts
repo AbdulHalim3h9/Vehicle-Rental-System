@@ -18,7 +18,7 @@ const signin = async (email: string, password: string) => {
       if (!user) {
             return { 
                   statusCode: 404,
-                  status: 'error', 
+                  success: false, 
                   message: 'User not found' 
             };
       }
@@ -26,7 +26,7 @@ const signin = async (email: string, password: string) => {
       if (!isPasswordMatched) {
             return { 
                   statusCode: 401,
-                  status: 'error', 
+                  success: false, 
                   message: 'Invalid password' 
             };
       }

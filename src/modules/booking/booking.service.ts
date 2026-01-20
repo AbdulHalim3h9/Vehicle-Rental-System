@@ -83,36 +83,50 @@ const createBooking = async (
 const updateBooking = async (payload: Record<string, unknown>) => {
       const {
             bookingId,
-            userId,
-            vehicleId,
-            startDate,
             status,
             tokenUserId
       } = payload;
 
-      const bookingStartDate = new Date(startDate as string).getTime();
+      const booking = await pool.query(
+            `SELECT customer_id, vehicle_id,rent_start_date FROM bookings WHERE id = $1`,
+            [bookingId]
+      );
+      const userId = booking.rows[0].customer_id;
+      const vehicleId = booking.rows[0].vehicle_id;
+      const bookingStartDate = booking.rows[0].rent_start_date;
+
       const user = await pool.query(
             `SELECT role FROM users WHERE id = $1`,
             [userId]
       );
-
+      if (tokenUserId != userId && user.rows[0].role === "customer") {
+            return { success: false, message: "you are not authorized to update someone else's booking" };
+      }
       if (user.rows[0].role === "customer" && tokenUserId === userId && bookingStartDate > new Date().getTime()) {
             if (status === "cancelled") {
-                  await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
+                  const result = await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
                   await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
+
+                  return { success: true, message: "booking cancelled successfully", data: result.rows[0] };
             }
-            return { success: true };
+            return {
+                  success: false,
+                  message: "booking update failed"
+            }
+      }
+      if (bookingStartDate < new Date().getTime()) {
+            return { success: false, message: "booking already started" };
       }
 
       if (user.rows[0].role === "admin" && status === "returned") {
-            await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2`, [status, bookingId]);
+            const bookingResult = await pool.query(`UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *`, [status, bookingId]);
 
-            await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2`, ["available", vehicleId]);
+            const vehicleAvailabilityStatus = await pool.query(`UPDATE vehicles SET availability_status = $1 WHERE id = $2 RETURNING availability_status`, ["available", vehicleId]);
 
-            return { success: true };
+            return { success: true, message: "Booking marked as returned. Vehicle is now available", data: {...bookingResult.rows[0], vehicle:{availability_status: vehicleAvailabilityStatus.rows[0].availability_status}} };
       }
 
-      return { error: "Unauthorized" };
+      return { success: false, message: "booking update failed" };
 }
 
 const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
@@ -131,11 +145,11 @@ const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
                   WHERE b.customer_id = $1
                   ORDER BY b.id DESC
             `, [tokenUserId]);
-            
+
             if (userBookings.rows.length === 0) {
                   throw new Error("No bookings found for this user");
             }
-            
+
             // Format the response to match desired structure
             const formattedBookings = userBookings.rows.map(booking => ({
                   id: booking.id,
@@ -150,7 +164,7 @@ const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
                         type: booking.type
                   }
             }));
-            
+
             return { rows: formattedBookings };
       } else if (tokenRole === "admin") {
             // Admin can see all bookings with customer and vehicle details
@@ -166,7 +180,7 @@ const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
                   LEFT JOIN vehicles v ON b.vehicle_id = v.id
                   ORDER BY b.id DESC
             `);
-            
+
             // Format the response to match desired structure
             const formattedBookings = result.rows.map(booking => ({
                   id: booking.id,
@@ -185,7 +199,7 @@ const getAllBookings = async (tokenUserId: string, tokenRole: string) => {
                         registration_number: booking.registration_number
                   }
             }));
-            
+
             return { rows: formattedBookings };
       }
       throw new Error("No bookings found for this user");

@@ -7,22 +7,14 @@ const updateUser = async (payload: Record<string, unknown>) => {
             throw new Error("Unauthorized");
       }
       if (tokenUserRole === "admin") {
-            const result = await pool.query(`UPDATE users SET name = $1, email = $2, phone = $3, role = $4 WHERE id = $5 RETURNING *`, [name, email, phone, role, id]);
-
-            // return {
-            //       statusCode: 200,
-            //       success: true, 
-            //       message: "User updated successfully" 
-            // };
+            const result = await pool.query(`UPDATE users SET name = $1, email = $2, phone = $3, role = $4 WHERE id = $5 RETURNING id, name, email, phone, role`, [name, email, phone, role, id]);
             return result;
       }
-      const result = await pool.query(`UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4 RETURNING *`, [name, email, phone, id]);
-
-      // return {
-      //       statusCode: 200,
-      //       success: true, 
-      //       message: "User updated successfully" 
-      // };
+      if (tokenUserRole === "customer" && role == "admin") {
+            throw new Error("You are not authorized to update user role to admin");
+      }
+      const result = await pool.query(`UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4 RETURNING id, name, email, phone, role`, [name, email, phone, id]);
+      
       return result;
 }
 

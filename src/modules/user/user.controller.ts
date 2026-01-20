@@ -6,13 +6,13 @@ const getAllUsers = async (req: Request, res: Response) => {
             const result = await UserService.getAllUsers();
             res.status(200).json({
                   success: true,
-                  message: "All users fetched successfully",
+                  message: "All users retrived successfully",
                   data: result.rows
             })
       } catch (err : any) {
             res.status(500).json({
                   success: false,
-                  message: "Failed to fetch users",
+                  message: "Failed to retrive users",
                   error: err.message
             })
       }

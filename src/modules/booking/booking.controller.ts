@@ -22,12 +22,20 @@ const createBooking = async (req: Request, res: Response) => {
 const updateBooking = async (req: Request, res: Response) => {
       try {
             const tokenUserId = req.user?.id;
-            const result = await BookingService.updateBooking({ ...req.body, userId: tokenUserId })
-      res.status(200).json({
-            success: true,
-            message: "Booking updated successfully",
-            data: result
-      })
+            const result = await BookingService.updateBooking({ ...req.body, bookingId: req.params.bookingId , tokenUserId: tokenUserId})
+            if (result.success) {
+                  res.status(200).json({
+                        success: result.success,
+                        message: result.message,
+                        data: result.data
+                  })
+            }
+            else{
+                  res.status(400).json({
+                        success: result.success,
+                        message: result.message
+                  })
+            }
       } catch (err: any) {
             res.status(500).json({
                   success: false,

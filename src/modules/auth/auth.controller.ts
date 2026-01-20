@@ -22,7 +22,7 @@ const signin = async (req: Request, res: Response) => {
       try {
             const { email, password } = req.body;
             const result = await authService.signin(email, password)
-            if (result.status === 'error') {
+            if (result.success === false) {
                   res.status(200).json({
                         success: false,
                         message: result.message
